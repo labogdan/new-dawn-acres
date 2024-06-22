@@ -7,6 +7,7 @@ import Navbar from 'react-bootstrap/Navbar';
 import Button from "react-bootstrap/Button";
 
 import logo from './image/new-dawn-logo.png';
+import header from './image/new-dawn-header.jpeg'
 
 const LoginButton = () => {
     const { loginWithRedirect } = useAuth0();
@@ -33,7 +34,7 @@ const Header = () => {
         <Navbar bg="light" expand="lg">
             <Container>
                 <Navbar.Brand href="/">
-                    <img src={logo} style={{maxWidth: '700px'}} />
+                    <img src={header} />
                 </Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">

@@ -7,7 +7,10 @@
     "heroku-postbuild": "cd frontend && ls -la && npm install && npm run build"
   },
   "dependencies": {
+    "@apollo/react-hooks": "^4.0.0",
+    "apollo-boost": "^0.4.9",
     "express": "^4.18.1",
+    "graphql": "^15.8.0",
     "node-fetch": "^3.2.9",
     "pg": "^8.7.3"
   },

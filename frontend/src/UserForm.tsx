@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import UserService from './users'
+import UserService from './order'
 
 import { withAuthenticationRequired } from '@auth0/auth0-react';
 
@@ -11,10 +11,10 @@ import Container from "react-bootstrap/Container";
 import { ListGroup, CloseButton } from "react-bootstrap"; 
 
 import { useAuth0 } from '@auth0/auth0-react';
+import gql from 'graphql-tag'
+import useRequest from './useRequest'
 
-import ToggleButton from "react-bootstrap/ToggleButton";
-import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup";
-
+import { TakeShape } from "./TakeShape";
 
 import Header from "./Header";
 import SuccessModal from "./SuccessModal";
@@ -22,19 +22,52 @@ import WelcomeModal from "./WelcomeModal";
 import Total from "./Total";
 
 type Item = {
-    item: string;
+    product_id: string;
     quantity: string;
   };
 
 
 function ItemForm() {
+
   const [selectedItem, setSelectedItem] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [orderId, setOrderId] = useState('');
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
+  const [pickupDateTakeShape, setPickupDateTakeShape] = useState('');
+
+  const handleUpdatePickupDate = (newPickupDate: string) => {
+    setPickupDateTakeShape(newPickupDate);
+  };
 
   const { user } = useAuth0();
 
-  console.log(user);
+  const customerId = user?.email;
+  const pickupLocation = user?.drop_location;
+
+  useEffect(() => {
+    console.log('getting items');
+    console.log(pickupLocation);
+    const fetchOrderItems = async () => {
+      if (customerId && pickupDateTakeShape) {
+        try {
+          console.log('going to fetch items');
+          console.log(customerId);
+          console.log(pickupDateTakeShape);
+          const order = await UserService.getOrder(customerId, pickupDateTakeShape);
+          console.log('order')
+          console.log(order);
+          console.log(order.orderItems);
+          console.log(order.order.order_id);
+          setOrderId(order.order.order_id);
+          setSelectedItems(order.orderItems);
+        } catch (error) {
+          console.error('Error fetching order items:', error);
+        }
+     }
+    };
+
+    fetchOrderItems();
+  }, [customerId, pickupDateTakeShape]);
 
   const items = [
     'Goat Milk',
@@ -72,11 +105,12 @@ function ItemForm() {
     if (selectedItem && quantity) {
       console.log(selectedItem);
       console.log(selectedItems);
-      let foundItem = selectedItems.find(item => item.item === selectedItem);
+      let foundItem = selectedItems.find(item => item.product_id === selectedItem);
+      console.log(foundItem);
 
       if (foundItem) {
         const updatedItems = selectedItems.map(item => {
-          if (item.item === selectedItem) {
+          if (item.product_id === selectedItem) {
             return {
               ...item,
               quantity: (parseInt(item.quantity) + parseInt(quantity)).toString()
@@ -92,7 +126,7 @@ function ItemForm() {
 
       console.log(foundItem);
       const newItem: Item = {
-        item: selectedItem,
+        product_id: selectedItem,
         quantity: quantity
       };
       setSelectedItems([...selectedItems, newItem]);
@@ -107,10 +141,50 @@ function ItemForm() {
     setSelectedItems(updatedItems);
   };
 
+  let handleSubmit = async (e: any) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    if (form.checkValidity() === false) {
+        e.preventDefault();
+        e.stopPropagation();
+    } else {
+      console.log('submitting');
+      console.log(selectedItems);
+        //selectedItems.map((value, index) => {
+            try {
+                UserService.createOrder({user:user, items:selectedItems, orderId:orderId, pickupDate:pickupDateTakeShape})
+                    .then( () => {
+                        //setModalShow(true);
+                    })
+            } catch (e) {
+                console.error(e);
+            } finally {
+                console.log('done');
+            }
+
+        //});
+    }
+
+}
+
+/*
+const { loading, error, data } = useRequest(GET_DATES);
+if (error) return <h1>Something went wrong!</h1>
+if (loading) return <h1>Loading...</h1>
+console.log(data)
+*/
+
   return (
     <Container>
         <Header />
-      <Form>
+        Welcome,<b>{user?.name}</b>!
+        You are assigned to the <b>{user?.drop_location}</b> pickup location.
+        <TakeShape 
+          position="about" 
+          pickupLocation={pickupLocation}
+          onUpdatePickupDate={handleUpdatePickupDate}
+        />
+      <Form onSubmit={handleSubmit}>
         <Row>
           <Col>
             <Form.Group>
@@ -142,11 +216,16 @@ function ItemForm() {
             </Button>
           </Col>
         </Row>
+        <Form.Group className="mb-3">
+          <Button variant="primary" type="submit">
+              Submit
+          </Button>
+      </Form.Group>
       </Form>
       <ListGroup className="mt-3">
-        {selectedItems.map((item, index) => (
+        {selectedItems?.map((item, index) => (
          <ListGroup.Item key={index} className="d-flex justify-content-between align-items-center">
-         {item.quantity} x {item.item}
+         {item.quantity} x {item.product_id}
          <CloseButton
            onClick={() => removeItem(index)}
            className="float-right"
@@ -154,6 +233,7 @@ function ItemForm() {
        </ListGroup.Item>
         ))}
       </ListGroup>
+      
     </Container>
   );
 }
